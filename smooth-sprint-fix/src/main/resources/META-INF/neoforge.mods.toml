@@ -4,11 +4,11 @@ license="MIT"
 
 [[mods]]
 modId="smoothsprintfix"
-version="1.0.0"
+version="1.1.0"
 displayName="Smooth Sprint Fix"
 authors="OpenAI"
 description='''
-Client-side fix for Minecraft 1.21.1 double-tap sprint feeling unresponsive immediately after landing from a jump.
+Client-side sprint input fix for Minecraft 1.21.1: removes the awkward post-landing double-tap lockout and allows double-tap W to start sprinting while airborne.
 '''
 
 [[mixins]]
