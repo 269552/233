@@ -1,0 +1,29 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+
+[[mods]]
+modId="smoothsprintfix"
+version="1.0.0"
+displayName="Smooth Sprint Fix"
+authors="OpenAI"
+description='''
+Client-side fix for Minecraft 1.21.1 double-tap sprint feeling unresponsive immediately after landing from a jump.
+'''
+
+[[mixins]]
+config="smoothsprintfix.mixins.json"
+
+[[dependencies.smoothsprintfix]]
+modId="neoforge"
+type="required"
+versionRange="[21.1,)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.smoothsprintfix]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1]"
+ordering="NONE"
+side="CLIENT"
