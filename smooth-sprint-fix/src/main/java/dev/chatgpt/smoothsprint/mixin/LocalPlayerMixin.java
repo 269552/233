@@ -11,12 +11,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Fixes the awkward 1.21.1 double-tap sprint lockout after landing from a jump.
+ * Improves Minecraft 1.21.1 double-tap-W sprint handling.
  *
- * Vanilla 1.21.1 keeps its own sprintTriggerTime state. Around the airborne ->
- * grounded transition this can make a very fast new W-double-tap feel ignored.
- * We reset stale vanilla state on landing and, for a short post-landing window,
- * recognize a fresh pair of forward-key presses ourselves.
+ * Besides fixing the short post-landing lockout, this also allows a fresh
+ * double-tap of W to start sprinting while the local player is airborne.
+ * Ground sprint behavior remains vanilla; the mod only supplements the cases
+ * vanilla 1.21.1 does not handle smoothly.
  */
 @Mixin(LocalPlayer.class)
 public abstract class LocalPlayerMixin {
@@ -41,6 +41,10 @@ public abstract class LocalPlayerMixin {
     @Unique
     private int smoothsprint$landingGraceTicks;
 
+    /**
+     * Tracks a forward-key press globally, so the first press may happen on
+     * the ground and the second press may happen in the air.
+     */
     @Unique
     private int smoothsprint$doubleTapTicks;
 
@@ -63,12 +67,11 @@ public abstract class LocalPlayerMixin {
             return;
         }
 
-        // A real air -> ground transition. Clear the old 1.21.1 double-tap
-        // timer so the next pair of W presses starts from a clean state.
+        // Air -> ground: clear stale vanilla 1.21.1 sprint-double-tap state so
+        // a new double tap can be recognized immediately after landing.
         if (!this.smoothsprint$wasOnGround && onGround) {
             this.sprintTriggerTime = 0;
             this.smoothsprint$landingGraceTicks = SMOOTHSPRINT$LANDING_GRACE_TICKS;
-            this.smoothsprint$doubleTapTicks = 0;
         }
 
         if (this.smoothsprint$landingGraceTicks > 0) {
@@ -78,15 +81,17 @@ public abstract class LocalPlayerMixin {
             this.smoothsprint$doubleTapTicks--;
         }
 
-        // Only supplement vanilla immediately after landing. Everywhere else,
-        // Minecraft's original double-tap behavior is untouched.
-        if (this.smoothsprint$landingGraceTicks > 0
-                && minecraft.screen == null
-                && forwardDown
-                && !this.smoothsprint$wasForwardDown) {
+        // Only react to a real W press edge, not to holding W down.
+        if (minecraft.screen == null && forwardDown && !this.smoothsprint$wasForwardDown) {
             if (this.smoothsprint$doubleTapTicks > 0) {
-                if (smoothsprint$canSprint(player)) {
+                // Vanilla 1.21.1 only starts double-tap sprint in its grounded
+                // path. Supplement that behavior while airborne, and retain
+                // the previous landing-grace fix for the first moments after
+                // touching the ground.
+                if ((!onGround || this.smoothsprint$landingGraceTicks > 0)
+                        && smoothsprint$canSprint(player, onGround)) {
                     player.setSprinting(true);
+                    this.sprintTriggerTime = 0;
                 }
                 this.smoothsprint$doubleTapTicks = 0;
             } else {
@@ -99,13 +104,18 @@ public abstract class LocalPlayerMixin {
     }
 
     @Unique
-    private static boolean smoothsprint$canSprint(LocalPlayer player) {
-        return player.onGround()
+    private static boolean smoothsprint$canSprint(LocalPlayer player, boolean onGround) {
+        // The important difference from vanilla's grounded double-tap path is
+        // that onGround is NOT required here. All normal sprint restrictions
+        // are still respected.
+        return !player.isSprinting()
                 && !player.isPassenger()
                 && !player.isShiftKeyDown()
                 && !player.isUsingItem()
                 && !player.hasEffect(MobEffects.BLINDNESS)
                 && !player.getAbilities().flying
+                && !player.isFallFlying()
+                && !player.isInWater()
                 && (player.getFoodData().getFoodLevel() > 6 || player.getAbilities().mayfly);
     }
 }
