@@ -1,0 +1,32 @@
+name: Build Neo Voxy 1.21.1
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Clone Neo Voxy multiversion
+        run: git clone --depth 1 --branch multiversion https://github.com/NHblock-Johnsnow/neo-voxy-multiversion.git neo-voxy
+
+      - name: Build NeoForge 1.21.1
+        run: |
+          cd neo-voxy
+          chmod +x scripts/build.sh
+          ./scripts/build.sh neoforge-1.21.1
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: neo-voxy-1.21.1-neoforge
+          path: neo-voxy/dist/*.jar
+          if-no-files-found: error
